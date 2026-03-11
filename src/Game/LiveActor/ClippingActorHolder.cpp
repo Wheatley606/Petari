@@ -2,7 +2,7 @@
 #include "Game/LiveActor/ClippingActorInfo.hpp"
 #include "Game/LiveActor/LiveActor.hpp"
 #include "Game/LiveActor/ViewGroupCtrl.hpp"
-#include "Game/Util.hpp"
+#include "Game/Util/LiveActorUtil.hpp"
 
 namespace {
     static int sActorNumMax = 2560;
@@ -20,7 +20,7 @@ ClippingActorHolder::ClippingActorHolder()
 void ClippingActorHolder::movement() {
     mViewGroupCtrl->update();
 
-    for (s32 i = 0; i < _10->_4; i++) {
+    for (s32 i = 0; i < _10->mClippingActorNum; i++) {
         _10->mClippingActorList[i]->judgeClipping();
     }
 }
@@ -87,11 +87,97 @@ void ClippingActorHolder::invalidateClipping(LiveActor* pActor) {
     }
 }
 
+// Problem with !_1C->isInList(pActor), can't replicate the exact branching layout
+void ClippingActorHolder::addToClippingTarget(LiveActor* pActor) {
+    ClippingActorInfo* inf;
+
+    if (!MR::isInvalidClipping(pActor) && !_10->isInList(pActor)) {
+        if (!_1C->isInList(pActor)) {
+            return;
+        }
+
+        inf = _18->remove(pActor);
+        
+        if (inf->isGroupClipping()) {
+            _1C->add(inf);
+        }
+        else {
+            _10->add(inf);
+        }
+    }
+}
+
+void ClippingActorHolder::removeFromClippingTarget(LiveActor* pActor) {
+    ClippingActorInfo* inf;
+
+    if (!MR::isInvalidClipping(pActor) && !_18->isInList(pActor)) {
+        if (!_1C->isInList(pActor)) {
+            inf = _10->remove(pActor);
+        }
+        else {
+            inf = _1C->remove(pActor);
+        }
+
+        _18->add(inf);
+    }
+}
+
+ClippingActorInfo* ClippingActorHolder::startGroupClipping(LiveActor* pActor, const JMapInfoIter& rIter) {
+    ClippingActorInfo* inf = nullptr;
+
+    if (_10->isInList(pActor)) {
+        inf = _10->remove(pActor);
+        _1C->add(inf);
+    }
+    else {
+        if (_18->isInList(pActor)) {
+            inf = _18->find(pActor, nullptr);
+        }
+        else if (_14->isInList(pActor)) {
+            inf = _14->remove(pActor);
+            _1C->add(inf);
+            pActor->endClipped();
+        }
+    }
+
+    inf->setGroupClippingNo(rIter);
+    return inf;
+}
+
 void ClippingActorHolder::setTypeToSphere(LiveActor* pActor, f32 range, const TVec3f* a3) {
     find(pActor)->setTypeToSphere(range, a3);
 }
 
-// cast issues
+// cast issues (solved by separating the previous line into 2 so that the compiler treats the register containing level as an int instead of a short)
 void ClippingActorHolder::setFarClipLevel(LiveActor* pActor, s32 level) {
-    find(pActor)->mFarClipLevel = level;
+    ClippingActorInfo* info = find(pActor);
+    info->mFarClipLevel = level;
+}
+
+ClippingActorInfo* ClippingActorHolder::find(const LiveActor* pActor) const {
+    ClippingActorInfo* inf = _10->findOrNone(pActor);
+
+    if (inf != nullptr) {
+        return inf;
+    }
+
+    inf = _18->findOrNone(pActor);
+
+    if (inf != nullptr) {
+        return inf;
+    }
+
+    inf = _1C->findOrNone(pActor);
+
+    if (inf != nullptr) {
+        return inf;
+    }
+
+    inf = _14->find(pActor, nullptr);
+
+    return inf;
+}
+
+ClippingActorHolder::~ClippingActorHolder() {
+
 }

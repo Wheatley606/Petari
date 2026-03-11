@@ -36,7 +36,7 @@ public:
 
     ClippingActorInfo* remove(LiveActor*);
 
-    int _0;
-    s32 _4;
+    int mClippingActorMax;                   // 0x0
+    s32 mClippingActorNum;                   // 0x4
     ClippingActorInfo** mClippingActorList;  // 0x8
 };
