@@ -11,7 +11,7 @@ public:
 
     virtual ~ClippingInfoGroup();
 
-    void setGroupNo(const JMapInfoIter&);
+    void setGroupNo(const JMapInfoIter&) NO_INLINE;
     void registerInfo(ClippingActorInfo*);
     bool isClippedNowAll() const;
     void startClippedAll();
